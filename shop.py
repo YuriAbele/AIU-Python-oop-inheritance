@@ -1,7 +1,8 @@
-from classes.products import Electronics, Clothing
-from classes.users import Customer, Admin
-from classes.shoping_carts import ShoppingCart
-
+from classes.products import Clothing
+from classes.products import Electronics
+from classes.shoping_cart import ShoppingCart
+from classes.users import Admin
+from classes.users import Customer
 
 # Создаем продукты
 laptop = Electronics(name="Ноутбук", price=120000, brand="Dell", warranty_period=2)
