@@ -6,5 +6,8 @@ class User:
         self.username = username
         self.email = email
 
-    def get_details(self):
+    def __str__(self):
         return f"Пользователь: {self.username}, Email: {self.email}"
+
+    def get_details(self):
+        return self.__str__()

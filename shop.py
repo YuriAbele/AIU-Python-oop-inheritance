@@ -1,3 +1,4 @@
+from datetime import datetime
 from classes.products import Clothing, Electronics, HouseholdChemicals
 from classes.shoping_cart import ShoppingCart
 from classes.users import Admin, Customer
@@ -12,10 +13,13 @@ customer = Customer(username="Mikhail", email="python@derkunov.ru", address="033
 admin = Admin(username="root", email="root@derkunov.ru", admin_level=5)
 
 # Создаем корзину покупок и добавляем товары
-cart = ShoppingCart()
+cart = ShoppingCart(customer, admin)
 cart.add_item(laptop, 1)
 cart.add_item(tshirt, 3)
 cart.add_item(fairy, 2)
 
 # Выводим детали корзины
 print(cart.get_details())
+
+#####################################################################
+print(f"\nFinished at: {datetime.now():%Y-%m-%d %H:%M:%S}\n\n")

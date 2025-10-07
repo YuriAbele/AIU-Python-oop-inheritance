@@ -1,0 +1,12 @@
+{
+	"version": "0.1.0",
+	"configurations": [
+       {
+            "name": "Python: Запуск main.py",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/shop.py",
+            "console": "integratedTerminal"
+        }
+    ]
+}
