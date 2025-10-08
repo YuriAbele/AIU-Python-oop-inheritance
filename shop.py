@@ -9,8 +9,8 @@ tshirt = Clothing(name="Футболка", price=200, size="M", material="Хло
 fairy = HouseholdChemicals(name="Fairy", price=150)
 
 # Создаем пользователей
-customer = Customer(username="Mikhail", email="python@derkunov.ru", address="033 Russ Bur")
-admin = Admin(username="root", email="root@derkunov.ru", admin_level=5)
+customer = Customer(username="Mikhail", email="python@derkunov.ru", password="Qwertz123!", address="033 Russ Bur")
+admin = Admin(username="root", email="root@derkunov.ru", password="Asdfgh456!", admin_level=5)
 
 # Создаем корзину покупок и добавляем товары
 cart = ShoppingCart(customer, admin)
