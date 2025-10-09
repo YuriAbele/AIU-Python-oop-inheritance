@@ -1,4 +1,5 @@
 import uuid
+from classes.services.users_service import UsersService
 from classes.users import Admin, User
 
 # СЕРВИС АУТЕНТИФИКАЦИИ ПОЛЬЗОВАТЕЛЕЙ
@@ -21,8 +22,15 @@ class AuthenticationService:
 	Сервис аутентификации пользователей.
 	"""
 
-	def __init__(self):
-		pass # ХЗ что тут инициализировать :-)
+	_user_service: UsersService
+
+	def __init__(self, user_service: UsersService):
+		"""_summary_
+		Инициализация сервиса аутентификации.
+		Args:
+			user_service (UsersService): должени быть передан экземпляр UsersService извне (для доступа к списку пользователей)
+		"""
+		self._user_service = user_service
 
 	# Список сессий пользователей, содержащий кортежи (username, session_token)
 	# Можно было бы организовать хранение сессий в виде словаря {username: session_token}, но тогда не смогли бы быть
@@ -41,13 +49,15 @@ class AuthenticationService:
 		normalized_username = username.strip().lower() # Usernames не чувствительны к регистру
 
 		# Ищем пользователя по username
-		user = next((user for user in User.__list_users if user.username == username), None)
+		result = self._user_service.find_user(username_to_find=normalized_username)
+		# проверка, что пользователь найден
+		user = result if isinstance(result, User) else None
 
 		# Если найден - проверяем пароль. Если верный, создаем токен сессии и сохраняем (username, session_token) в списке активных сессий
-		if user and User.check_password(user.password, password):
+		if user and User.check_password(user.password_hash_hex, password):
 			# В роли токена сессии используем UUID4 в виде hex-строки
 			session_token = uuid.uuid4().hex
-			AuthenticationService.__active_sessions.append((username, session_token))
+			AuthenticationService.__active_sessions.append((normalized_username, session_token))
 			return f"Аутентификация успешна. Токен сессии: {session_token}"
 
 		return "Ошибка аутентификации. Неверное имя-пользователя или пароль."
@@ -80,12 +90,22 @@ class AuthenticationService:
 		# Фильтруем список активных сессий, удаляя все сессии с указанным имени-пользователя
 		AuthenticationService.__active_sessions = [
 			# На интересуются только username, остальные данные сессии не важны
-			(username, _) for (username, _) in AuthenticationService.__active_sessions
-			if username != normalized_username_to_close_sessions
+			(username, _) for (username, _) in AuthenticationService.__active_sessions if username != normalized_username_to_close_sessions
 		]
 		# Считаем, сколько сессий было закрыто
 		closed_count = initial_count - len(AuthenticationService.__active_sessions)
-		return f"Закрыто {closed_count} сессий для пользователя с именем: {normalized_username_to_close_sessions}"
+		return f"Закрыто {closed_count} сессий для пользователя с именем: \"{username_to_close_sessions}\""
+
+	def list_active_sessions(self, current_user: User) -> list[(str, str)] | str:
+		"""
+		Возвращает список всех активных сессий в виде кортежей (username, session_token).
+		Только администраторы могут просматривать список всех активных сессий.
+		"""
+
+		if not isinstance(current_user, Admin):
+			return "Доступ запрещен. Только администраторы могут просматривать список активных сессий."
+
+		return AuthenticationService.__active_sessions
 
 	# Такой метод без параметров не имеет смысла, так как не знает, какую сессию закрывать.
 	# Перенос же его в класс не имеет смысла, так как класс User не хранит информацию о сессиях.

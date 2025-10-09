@@ -24,6 +24,9 @@ class User:
 	def __str__(self):
 		return f"Пользователь: {self.username}, Email: {self.email}"
 
+	def __repr__(self):
+		return f"User(username=\"{self.username}\", email=\"{self.email}\", password=\"<CENSORED>\")"
+
 	# По хорошему он вообще не нужен, так как есть __str__
 	def get_details(self) -> str:
 		return self.__str__()
@@ -34,12 +37,12 @@ class User:
 	def hash_password(password: str) -> str:
 		"""
 		Хеширование пароля с солью.
-		Используется SHA-256 с уникальной солью на основе UUID4.
+		Используется SHA-256.
 		Возвращается хеш в виде hex-строки.
+		TODO: в реальности нужно использовать более надежный алгоритм с солью, например bcrypt или Argon2.
 		"""
 		password_encoded = password.encode()
-		password_salt = uuid.uuid4().bytes
-		password_hash = hashlib.sha256(password_encoded + password_salt)
+		password_hash = hashlib.sha256(password_encoded)
 		password_hash_hex = password_hash.hexdigest()
 		return password_hash_hex
 
@@ -50,5 +53,6 @@ class User:
 		"""
 		Проверка пароля. Вычисляет хеш для введенного пароля и сравнивает с эталонным хешем.
 		"""
-		return password_hash_hex == User.hash_password(password)
+		password_to_test_hash_hex = User.hash_password(password)
+		return password_hash_hex == password_to_test_hash_hex
 

@@ -40,7 +40,7 @@ class UsersService:
 		if not isinstance(current_user, Admin):
 			return "Доступ запрещен. Только администраторы могут просматривать список пользователей."
 
-		return User.__list_users
+		return UsersService.__list_users
 
 
 	def add_user(current_user: User, new_user: User) -> str:
@@ -54,11 +54,11 @@ class UsersService:
 		if not isinstance(new_user, User):
 			return "Ошибка: можно добавить только объекты класса User или его подклассов."
 
-		if any(user.username == new_user.username for user in User.__list_users):
-			return f"Пользователь {new_user.username} уже существует."
+		if any(user.username == new_user.username for user in UsersService.__list_users):
+			return f"Пользователь \"{new_user.username}\" уже существует."
 
-		User.__list_users.append(new_user)
-		return f"Пользователь {new_user.username} добавлен."
+		UsersService.__list_users.append(new_user)
+		return f"Пользователь \"{new_user.username}\" добавлен."
 
 	# user_class - строка с именем класса пользователя, например "Admin" или "Customer"
 	# Зачем еще "*args" - я не понял
@@ -86,15 +86,55 @@ class UsersService:
 		normalized_email = email.strip() # Email может быть с заглавными буквами
 
 		# Проверяем, что пользователь с таким именем не существует
-		if any(user.username == normalized_username for user in User.__list_users):
-			return f"Пользователь {normalized_username} уже существует."
+		if any(user.username == normalized_username for user in UsersService.__list_users):
+			return f"Пользователь \"{normalized_username}\" уже существует."
 
 		if normalized_user_class == "admin":
 			new_user = Admin(normalized_username, normalized_email, password, admin_level=UsersService.__DEFAULT_ADMIN_LEVEL)
 		elif normalized_user_class == "customer":
 			new_user = Customer(normalized_username, normalized_email, password, address=UsersService.__DEFAULT_ADDRESS)
 		else:
-			return f"Ошибка: неизвестный класс пользователя '{normalized_user_class}'."
+			return f"Ошибка: неизвестный класс пользователя \"{normalized_user_class}\"'."
 
 		message = UsersService.add_user(current_user, new_user) # Вернувшееся сообщение сохраняем в переменную для облегчения отладки
 		return message
+
+	def delete_user(self, current_user: User, username_to_delete: str) -> str:
+		"""
+		Удаляет пользователя по имени-пользователя.
+		Только администраторы могут удалять пользователей.
+		Возвращает сообщение об успешном удалении или сообщение об ошибке.
+		"""
+
+		if not isinstance(current_user, Admin):
+			return "Доступ запрещен. Только администраторы могут удалять пользователей."
+
+		# Нормализуем входные данные
+		normalized_username_to_delete = username_to_delete.strip().lower() # Usernames не чувствительны к регистру
+
+		# Ищем пользователя по username
+		user_to_delete = next((user for user in UsersService.__list_users if user.username == normalized_username_to_delete), None)
+
+		if not user_to_delete:
+			return f"Пользователь \"{normalized_username_to_delete}\" не найден."
+
+		UsersService.__list_users.remove(user_to_delete)
+		return f"Пользователь \"{normalized_username_to_delete}\" удален."
+
+	def find_user(self, username_to_find: str) -> str | User:
+		"""
+		Ищет пользователя по имени-пользователя.
+		Должна использоваться только для аутентификации.
+		Возвращает объект пользователя или сообщение об ошибке.
+		"""
+
+		# Нормализуем входные данные
+		normalized_username_to_find = username_to_find.strip().lower() # Usernames не чувствительны к регистру
+
+		# Ищем пользователя по username
+		user_to_find = next((user for user in UsersService.__list_users if user.username == normalized_username_to_find), None)
+
+		if not user_to_find:
+			return f"Пользователь \"{normalized_username_to_find}\" не найден."
+
+		return user_to_find
