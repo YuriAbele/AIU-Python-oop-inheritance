@@ -1,50 +1,108 @@
 import uuid
 from classes.users import Admin, User
 
+# СЕРВИС АУТЕНТИФИКАЦИИ ПОЛЬЗОВАТЕЛЕЙ
+#
+# В реальности аутентификация и управление сессиями - сложные темы, требующие
+# продуманной архитектуры, хранения сессий в базе данных или кэше,
+# использования безопасных протоколов и т.д.
+# Здесь же для простоты примера реализован упрощенный вариант.
+# В реальности для аутентификации часто используют сторонние библиотеки и сервисы.
+# Например, OAuth, JWT, LDAP и т.д.
+#
+# Важно:
+# 	Управление самими пользователями (создание, удаление, изменение) реализовано в классе UsersService.
+# 	Аутентификация же - в классе AuthenticationService.
+# 	Это разделение ответственности - хороший архитектурный подход.
+
+
 class AuthenticationService:
 	"""
 	Сервис аутентификации пользователей.
 	"""
 
 	def __init__(self):
-		pass
+		pass # ХЗ что тут инициализировать :-)
 
-	# Список сессий пользователей, содержащий кортежи (user_email, session_token)
-	# Можно было бы организовать хранение сессий в виде словаря {user_email: session_token}, но тогда не смогли бы быть
+	# Список сессий пользователей, содержащий кортежи (username, session_token)
+	# Можно было бы организовать хранение сессий в виде словаря {username: session_token}, но тогда не смогли бы быть
 	# одновременно активны несколько сессий одного пользователя (что в реальности возможно)
+	# В реальности сессии хранятся в базе данных или в кэше, с датой начала сессии, но для простоты примера используем list[(username, session_token)] в памяти
 	__active_sessions: list[(str, str)] = []
 
-	def login(self, email: str, password: str) -> str:
+	def login(self, username: str, password: str) -> str:
 		"""
-		Аутентифицирует пользователя по email и паролю.
+		Аутентифицирует пользователя по имени-пользователя и паролю.
+		Если аутентификация успешна, создает токен сессии и сохраняет его в списке активных сессий.
+		Возвращает сообщение об успешной аутентификации с токеном сессии или сообщение об ошибке.
 		"""
-		# Ищем пользователя по email
-		user = next((user for user in User.__list_users if user.email == email), None)
 
-		# Если найден - проверяем пароль. Если верный, создаем токен сессии и сохраняем (user_email, session_token) в списке активных сессий
+		# Нормализуем входные данные
+		normalized_username = username.strip().lower() # Usernames не чувствительны к регистру
+
+		# Ищем пользователя по username
+		user = next((user for user in User.__list_users if user.username == username), None)
+
+		# Если найден - проверяем пароль. Если верный, создаем токен сессии и сохраняем (username, session_token) в списке активных сессий
 		if user and User.check_password(user.password, password):
+			# В роли токена сессии используем UUID4 в виде hex-строки
 			session_token = uuid.uuid4().hex
-			AuthenticationService.__active_sessions.append((email, session_token))
+			AuthenticationService.__active_sessions.append((username, session_token))
 			return f"Аутентификация успешна. Токен сессии: {session_token}"
 
-		return "Ошибка аутентификации. Неверный email или пароль."
+		return "Ошибка аутентификации. Неверное имя-пользователя или пароль."
 
 
-	@staticmethod
-	def close_user_sessions(current_user: User, sessions_email: str) -> str:
+	# Такой метод без параметров не имеет смысла, так как не знает, какую сессию закрывать.
+	# Перенос же его в класс не имеет смысла, так как класс User не хранит информацию о сессиях.
+	# Или это потребует хранения сессий в самом классе User, что не очень правильно с точки зрения архитектуры.
+	# Импортирование же класса AuthenticationService в класс User создаст циклическую зависимость.
+	#
+	# def logout(self):
+	#	"""
+	#	Выход пользователя из системы.
+	#	"""
+
+	def close_user_sessions(self, current_user: User, username_to_close_sessions: str) -> str:
 		"""
-		Закрывает все активные сессии пользователя по email.
+		Закрывает все активные сессии пользователя по имени-пользователя.
+		Только администраторы могут закрывать сессии других пользователей.
+		Возвращает сообщение о количестве закрытых сессий или сообщение об ошибке.
 		"""
 		if not isinstance(current_user, Admin):
 			return "Доступ запрещен. Только администраторы могут закрывать сессии пользователей."
 
+		# Нормализуем входные данные
+		normalized_username_to_close_sessions = username_to_close_sessions.strip().lower() # Usernames не чувствительны к регистру
+
 		# Считаем количество активных сессий до удаления
 		initial_count = len(AuthenticationService.__active_sessions)
-		# Фильтруем список активных сессий, удаляя все сессии с указанным email
+		# Фильтруем список активных сессий, удаляя все сессии с указанным имени-пользователя
 		AuthenticationService.__active_sessions = [
-			(session_email, token) for (session_email, token) in AuthenticationService.__active_sessions
-			if session_email != sessions_email
+			# На интересуются только username, остальные данные сессии не важны
+			(username, _) for (username, _) in AuthenticationService.__active_sessions
+			if username != normalized_username_to_close_sessions
 		]
 		# Считаем, сколько сессий было закрыто
 		closed_count = initial_count - len(AuthenticationService.__active_sessions)
-		return f"Закрыто {closed_count} сессий для пользователя с email: {sessions_email}"
+		return f"Закрыто {closed_count} сессий для пользователя с именем: {normalized_username_to_close_sessions}"
+
+	# Такой метод без параметров не имеет смысла, так как не знает, какую сессию закрывать.
+	# Перенос же его в класс не имеет смысла, так как класс User не хранит информацию о сессиях.
+	# Или это потребует хранения сессий в самом классе User, что не очень правильно с точки зрения архитектуры.
+	# Импортирование же класса AuthenticationService в класс User создаст циклическую зависимость.
+	#
+	# def logout(self):
+	#	"""
+	#	Выход пользователя из системы.
+	#	"""
+
+	# Такой метод без параметров не имеет смысла, так как не знает, какого пользователя возвращать.
+	# Перенос же его в класс не имеет смысла, так как класс User не хранит информацию о сессиях.
+	# Или это потребует хранения сессий в самом классе User, что не очень правильно с точки зрения архитектуры.
+	# Импортирование же класса AuthenticationService в класс User создаст циклическую зависимость.
+	#
+	# def get_current_user(self):
+	#	"""
+	#	Возвращает текущего вошедшего пользователя.
+	#	"""
