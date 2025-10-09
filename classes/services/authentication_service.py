@@ -14,8 +14,7 @@ class AuthenticationService:
 	# одновременно активны несколько сессий одного пользователя (что в реальности возможно)
 	__active_sessions: list[(str, str)] = []
 
-	@staticmethod
-	def authenticate(email: str, password: str) -> str:
+	def login(self, email: str, password: str) -> str:
 		"""
 		Аутентифицирует пользователя по email и паролю.
 		"""
