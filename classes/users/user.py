@@ -1,7 +1,6 @@
+from __future__ import annotations
 import hashlib
 import uuid
-from classes.users.admin import Admin
-from __future__ import annotations
 
 class User:
 	"""
